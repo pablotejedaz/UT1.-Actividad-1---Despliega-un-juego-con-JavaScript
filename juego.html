@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pong en JavaScript</title>
+<style>
+  body {
+    margin: 0;
+    background: #000;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    font-family: monospace;
+  }
+  canvas {
+    border: 2px solid #fff;
+    background: #111;
+  }
+  h1 {
+    margin-bottom: 10px;
+  }
+</style>
+</head>
+<body>
+<h1>PONG 🎾</h1>
+<canvas id="pong" width="800" height="500"></canvas>
+<p>Controles: W/S (izq) · ↑/↓ (der) · Espacio (pausa)</p>
+
+<script>
+const canvas = document.getElementById("pong");
+const ctx = canvas.getContext("2d");
+
+// Constantes del juego
+const paddleWidth = 10;
+const paddleHeight = 100;
+const ballSize = 10;
+
+// Estado del juego
+let leftPaddle = { x: 20, y: canvas.height / 2 - paddleHeight / 2, dy: 0 };
+let rightPaddle = { x: canvas.width - 30, y: canvas.height / 2 - paddleHeight / 2, dy: 0 };
+let ball = { 
+  x: canvas.width / 2, 
+  y: canvas.height / 2, 
+  dx: 5 * (Math.random() > 0.5 ? 1 : -1), 
+  dy: 4 * (Math.random() > 0.5 ? 1 : -1)
+};
+let score = { left: 0, right: 0 };
+let running = false;
+
+// Funciones de dibujo
+function drawRect(x, y, w, h) {
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(x, y, w, h);
+}
+function drawCircle(x, y, r) {
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fillStyle = "#fff";
+  ctx.fill();
+  ctx.closePath();
+}
+function drawText(text, x, y) {
+  ctx.font = "32px monospace";
+  ctx.fillText(text, x, y);
+}
+
+// Reinicia la posición de la pelota
+function resetBall(servingLeft = Math.random() > 0.5) {
+  ball.x = canvas.width / 2;
+  ball.y = canvas.height / 2;
+  ball.dx = (servingLeft ? -5 : 5);
+  ball.dy = (Math.random() > 0.5 ? 4 : -4);
+}
+
+// Actualiza el juego
+function update() {
+  if (!running) return;
+
+  // Movimiento de paletas
+  leftPaddle.y += leftPaddle.dy;
+  rightPaddle.y += rightPaddle.dy;
+
+  // Limita dentro del canvas
+  leftPaddle.y = Math.max(0, Math.min(canvas.height - paddleHeight, leftPaddle.y));
+  rightPaddle.y = Math.max(0, Math.min(canvas.height - paddleHeight, rightPaddle.y));
+
+  // Movimiento de la pelota
+  ball.x += ball.dx;
+  ball.y += ball.dy;
+
+  // Rebote superior/inferior
+  if (ball.y <= 0 || ball.y >= canvas.height - ballSize) {
+    ball.dy *= -1;
+  }
+
+  // Colisión con paleta izquierda
+  if (
+    ball.x <= leftPaddle.x + paddleWidth &&
+    ball.y + ballSize >= leftPaddle.y &&
+    ball.y <= leftPaddle.y + paddleHeight
+  ) {
+    ball.dx *= -1;
+    ball.x = leftPaddle.x + paddleWidth; // evitar quedarse dentro
+  }
+
+  // Colisión con paleta derecha
+  if (
+    ball.x + ballSize >= rightPaddle.x &&
+    ball.y + ballSize >= rightPaddle.y &&
+    ball.y <= rightPaddle.y + paddleHeight
+  ) {
+    ball.dx *= -1;
+    ball.x = rightPaddle.x - ballSize;
+  }
+
+  // Punto para derecha
+  if (ball.x < 0) {
+    score.right++;
+    resetBall(false);
+  }
+
+  // Punto para izquierda
+  if (ball.x > canvas.width) {
+    score.left++;
+    resetBall(true);
+  }
+}
+
+// Dibuja cada frame
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Dibuja línea central
+  for (let i = 0; i < canvas.height; i += 20) {
+    drawRect(canvas.width / 2 - 1, i, 2, 10);
+  }
+
+  // Dibuja paletas y pelota
+  drawRect(leftPaddle.x, leftPaddle.y, paddleWidth, paddleHeight);
+  drawRect(rightPaddle.x, rightPaddle.y, paddleWidth, paddleHeight);
+  drawCircle(ball.x, ball.y, ballSize);
+
+  // Marcador
+  drawText(score.left, canvas.width / 4, 50);
+  drawText(score.right, 3 * canvas.width / 4, 50);
+}
+
+// Bucle principal
+function gameLoop() {
+  update();
+  draw();
+  requestAnimationFrame(gameLoop);
+}
+
+// Controles
+document.addEventListener("keydown", (e) => {
+  if (e.code === "KeyW") leftPaddle.dy = -6;
+  if (e.code === "KeyS") leftPaddle.dy = 6;
+  if (e.code === "ArrowUp") rightPaddle.dy = -6;
+  if (e.code === "ArrowDown") rightPaddle.dy = 6;
+
+  if (e.code === "Space") {
+    running = !running;
+    if (running) resetBall();
+  }
+});
+document.addEventListener("keyup", (e) => {
+  if (e.code === "KeyW" || e.code === "KeyS") leftPaddle.dy = 0;
+  if (e.code === "ArrowUp" || e.code === "ArrowDown") rightPaddle.dy = 0;
+});
+
+gameLoop();
+</script>
+</body>
+</html>
